@@ -1,0 +1,70 @@
+Second prototype with arming
+```
+ #include <Servo.h>
+#include <PPMReader.h>
+
+// Initialize a PPMReader on digital pin 3 with 6 expected channels.
+byte interruptPin = 3;
+byte channelAmount = 5;
+PPMReader ppm(interruptPin, channelAmount);
+
+// Define ESC pins
+#define ESC1_PIN 5
+#define ESC2_PIN 6
+#define ESC3_PIN 9
+#define ESC4_PIN 10
+
+Servo esc1, esc2, esc3, esc4;
+
+// Variable to track arm/disarm status
+bool isArmed = false;
+
+void setup() {
+    Serial.begin(115200); // Initialize serial communication
+    esc1.attach(ESC1_PIN);
+    esc2.attach(ESC2_PIN);
+    esc3.attach(ESC3_PIN);
+    esc4.attach(ESC4_PIN);
+    
+    // Initialize ESCs to the lowest throttle
+    esc1.writeMicroseconds(1000);
+    esc2.writeMicroseconds(1000);
+    esc3.writeMicroseconds(1000);
+    esc4.writeMicroseconds(1000);
+    
+    delay(2000); // Wait for ESCs to initialize
+}
+
+void loop() {
+    for (byte channel = 1; channel <= channelAmount; ++channel) {
+        unsigned value = ppm.latestValidChannelValue(channel, 0);
+        Serial.print("Ch" + String(channel) + ": " + String(value) + "\t");
+
+        // Arm/Disarm control on Channel 5
+        if (channel == 5) {
+            if (value > 1500) {
+                isArmed = true;  // If channel 5 value is high (above 1500), arm the drone
+            } else {
+                isArmed = false; // If channel 5 value is low, disarm the drone
+            }
+        }
+
+        // Throttle control on Channel 3 (only if armed)
+        if (channel == 3 && isArmed) {
+            int escThrottle = map(value, 1000, 2000, 1000, 2000);
+            esc1.writeMicroseconds(escThrottle);
+            esc2.writeMicroseconds(escThrottle);
+            esc3.writeMicroseconds(escThrottle);
+            esc4.writeMicroseconds(escThrottle);
+        } else if (!isArmed) {
+            // If disarmed, send the lowest throttle to ESCs
+            esc1.writeMicroseconds(1000);
+            esc2.writeMicroseconds(1000);
+            esc3.writeMicroseconds(1000);
+            esc4.writeMicroseconds(1000);
+        }
+    }
+    Serial.println();
+    delay(20);
+}
+```
