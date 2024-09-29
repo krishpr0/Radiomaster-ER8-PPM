@@ -51,7 +51,7 @@ void loop() {
 
         // Throttle control on Channel 3 (only if armed)
         if (channel == 3 && isArmed) {
-            int escThrottle = map(value, 1000, 2000, 1000, 2000);
+            int escThrottle = map(value, 0, 2000, 1020, 2000);
             esc1.writeMicroseconds(escThrottle);
             esc2.writeMicroseconds(escThrottle);
             esc3.writeMicroseconds(escThrottle);
