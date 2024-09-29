@@ -3,7 +3,7 @@
 #include <Servo.h>
 #include <PPMReader.h>
 
-// Initialize a PPMReader on digital pin 3 with 6 expected channels.
+// Initialize a PPMReader on digital pin 3 with 5 expected channels.
 byte interruptPin = 3;
 byte channelAmount = 5;
 PPMReader ppm(interruptPin, channelAmount);
@@ -41,7 +41,7 @@ void loop() {
         // Control the ESCs based on the throttle channel (usually channel 1)
         if (channel == 1) {
             // Map throttle value to ESC values
-            int escThrottle = map(value, 1000, 2000, 1000, 2000);
+            int escThrottle = map(value, 0, 2000, 1020, 2000);
             esc1.writeMicroseconds(escThrottle);
             esc2.writeMicroseconds(escThrottle);
             esc3.writeMicroseconds(escThrottle);
