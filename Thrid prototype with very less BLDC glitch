@@ -1,3 +1,5 @@
+#Although fixed the glitch there is still some noise in the throttle all of this code is for throttle.
+
 ```
 #include <Servo.h>
 #include <PPMReader.h>
