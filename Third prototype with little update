@@ -1,0 +1,112 @@
+```
+#include <Servo.h>
+#include <PPMReader.h>
+
+// Initialize a PPMReader on digital pin 3 with 5 expected channels.
+byte interruptPin = 3;
+byte channelAmount = 5;
+PPMReader ppm(interruptPin, channelAmount);
+
+// Define ESC pins
+#define ESC1_PIN 5
+#define ESC2_PIN 6
+#define ESC3_PIN 9
+#define ESC4_PIN 10
+
+Servo esc1, esc2, esc3, esc4;
+
+// Variable to track arm/disarm status
+bool isArmed = false;
+
+// Variables for throttle smoothing
+int lastThrottle = 1000; // Last throttle value
+const int maxThrottleChange = 50; // Max change in throttle per loop
+const int deadband = 10; // Ignore small throttle changes
+
+// Variables for exponential smoothing
+float smoothingFactor = 0.1; // Adjust between 0 and 1 (closer to 0 means more smoothing)
+float smoothedThrottle = 1000;
+
+// Variables for signal averaging
+const int numSamples = 5; // Number of samples for averaging
+int throttleSamples[numSamples]; // Array to store throttle samples
+int sampleIndex = 0; // Index for circular buffer
+
+void setup() {
+    Serial.begin(115200); // Initialize serial communication
+    esc1.attach(ESC1_PIN);
+    esc2.attach(ESC2_PIN);
+    esc3.attach(ESC3_PIN);
+    esc4.attach(ESC4_PIN);
+    
+    // Initialize ESCs to the lowest throttle
+    esc1.writeMicroseconds(1000);
+    esc2.writeMicroseconds(1000);
+    esc3.writeMicroseconds(1000);
+    esc4.writeMicroseconds(1000);
+    
+    delay(2000); // Wait for ESCs to initialize
+
+    // Initialize throttleSamples to 1000
+    for (int i = 0; i < numSamples; i++) {
+        throttleSamples[i] = 1000;
+    }
+}
+
+void loop() {
+    for (byte channel = 1; channel <= channelAmount; ++channel) {
+        unsigned value = ppm.latestValidChannelValue(channel, 0);
+        Serial.print("Ch" + String(channel) + ": " + String(value) + "\t");
+
+        // Arm/Disarm control on Channel 5
+        if (channel == 5) {
+            isArmed = (value > 1500); // Arm if channel 5 value is above 1500
+        }
+
+        // Throttle control on Channel 3 (only if armed)
+        if (channel == 3) {
+            int desiredThrottle = isArmed ? map(value, 0, 2000, 1020, 1900) : 1000;
+            desiredThrottle = constrain(desiredThrottle, 1020, 1900); // Constrain to avoid overflow
+
+            // Signal Averaging
+            throttleSamples[sampleIndex] = desiredThrottle;
+            sampleIndex = (sampleIndex + 1) % numSamples; // Circular buffer
+
+            // Calculate average throttle
+            int totalThrottle = 0;
+            for (int i = 0; i < numSamples; i++) {
+                totalThrottle += throttleSamples[i];
+            }
+            int averageThrottle = totalThrottle / numSamples;
+
+            // Apply Exponential Smoothing
+            smoothedThrottle = smoothingFactor * averageThrottle + (1 - smoothingFactor) * smoothedThrottle;
+
+            // Deadband: Ignore small variations
+            if (abs((int)smoothedThrottle - lastThrottle) > deadband) {
+                if (abs((int)smoothedThrottle - lastThrottle) > maxThrottleChange) {
+                    lastThrottle += (smoothedThrottle > lastThrottle) ? maxThrottleChange : -maxThrottleChange;
+                } else {
+                    lastThrottle = (int)smoothedThrottle;
+                }
+            }
+
+            // Send the smoothed throttle to all ESCs
+            esc1.writeMicroseconds(lastThrottle);
+            esc2.writeMicroseconds(lastThrottle);
+            esc3.writeMicroseconds(lastThrottle);
+            esc4.writeMicroseconds(lastThrottle);
+        }
+    }
+    Serial.println();
+    delay(20); // Short delay to avoid overwhelming the serial output
+}
+
+// Function to set the throttle to the lowest value
+void setThrottleToLowest() {
+    esc1.writeMicroseconds(1000);
+    esc2.writeMicroseconds(1000);
+    esc3.writeMicroseconds(1000);
+    esc4.writeMicroseconds(1000);
+}
+``
