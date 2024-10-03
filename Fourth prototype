@@ -1,0 +1,43 @@
+//Shows vlaue in serial mointor wihtout no glitching at all but just a slight
+#include <PPMReader.h>
+
+// Pin for PPM signal and number of channels to read
+#define INTERRUPT_PIN 3
+#define CHANNEL_AMOUNT 8
+
+// Initialize PPMReader with 8 channels and pin 2 for the interrupt signal
+PPMReader ppm(INTERRUPT_PIN, CHANNEL_AMOUNT);
+
+float ReceiverValue[CHANNEL_AMOUNT] = {0};  // Array to hold the receiver values
+int ChannelNumber = 0; // Track the number of channels
+
+void read_receiver() {
+  // Loop through all channels and read values
+  for (int i = 1; i <= CHANNEL_AMOUNT; i++) {
+    ReceiverValue[i - 1] = ppm.latestValidChannelValue(i, 0); // Read channel values
+  }
+}
+
+void setup() {
+  Serial.begin(57600);
+  pinMode(13, OUTPUT); 
+  digitalWrite(13, HIGH);
+}
+
+void loop() {
+  read_receiver(); // Read PPM values
+
+  // Display the number of channels and corresponding values
+  Serial.print("Number of channels: ");
+  Serial.print(CHANNEL_AMOUNT);  // Fixed to CHANNEL_AMOUNT since we know it
+  Serial.print(" Roll [µs]: ");
+  Serial.print(ReceiverValue[0]);  // Channel 1
+  Serial.print(" Pitch [µs]: ");
+  Serial.print(ReceiverValue[1]);  // Channel 2
+  Serial.print(" Throttle [µs]: ");
+  Serial.print(ReceiverValue[2]);  // Channel 3
+  Serial.print(" Yaw [µs]: ");
+  Serial.println(ReceiverValue[3]);  // Channel 4
+
+  delay(50); // Small delay to prevent overwhelming the serial monitor
+}
